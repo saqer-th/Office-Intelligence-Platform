@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../../../contexts/AuthContext";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -12,6 +13,7 @@ export default function VisitListDetail({ params }) {
     const [loading, setLoading] = useState(true);
     const [selectedIds, setSelectedIds] = useState(new Set());
     const router = useRouter();
+    const { user, token } = useAuth();
 
     useEffect(() => {
         const base = API_BASE_URL || "http://localhost:8000";
@@ -54,6 +56,27 @@ export default function VisitListDetail({ params }) {
         router.push(`/outreach?source=ids&ids=${ids}`);
     };
 
+    const handleDelete = async () => {
+        if (!confirm("Are you sure you want to delete this list?")) return;
+        try {
+            const base = API_BASE_URL || "http://localhost:8000";
+            const res = await fetch(`${base}/visit-lists/${params.id}`, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+            if (res.ok) {
+                alert("List deleted");
+                router.push("/visits");
+            } else {
+                alert("Failed to delete list");
+            }
+        } catch (e) {
+            alert("Error deleting list");
+        }
+    };
+
     if (loading) return <div className="p-12 text-center text-muted">Loading list details...</div>;
     if (!list) return <div className="p-12 text-center text-red-500">List not found</div>;
 
@@ -75,6 +98,11 @@ export default function VisitListDetail({ params }) {
                     Run Batch Outreach
                 </Link>
                 */}
+                {user?.role === 'Admin' && (
+                    <button onClick={handleDelete} className="text-xs text-red-500 underline ml-4 hover:text-red-700">
+                        Delete List
+                    </button>
+                )}
             </div>
 
             {/* Progress Bar */}

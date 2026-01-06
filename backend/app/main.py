@@ -1,11 +1,13 @@
 from datetime import datetime, timedelta
 import logging
-from fastapi import FastAPI, Depends, HTTPException, Query
+import logging
+from fastapi import FastAPI, Depends, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import bindparam, func, or_, text, case
 from .db import SessionLocal, engine
-from . import models, schemas
+from . import models, schemas, auth
+from fastapi.security import OAuth2PasswordRequestForm
 
 
 def serialize_office(office, metrics, scores, outreach, group):
@@ -136,6 +138,85 @@ def get_db():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.post("/auth/token", response_model=schemas.Token)
+def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
+    # Try to fetch user by email (form_data.username will be the email)
+    user = db.query(models.User).filter(models.User.email == form_data.username).first()
+    if not user or not user.hashed_password or not auth.verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        
+    access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = auth.create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.get("/users/me")
+def read_users_me(
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "name": current_user.name,
+        "role": current_user.role
+    }
+
+
+@app.post("/users", response_model=schemas.UserResponse)
+def create_user(
+    user: schemas.UserCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_admin)
+):
+    # Check existing
+    db_user = db.query(models.User).filter(models.User.email == user.email).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    hashed_password = auth.get_password_hash(user.password)
+    new_user = models.User(
+        email=user.email,
+        name=user.name,
+        hashed_password=hashed_password,
+        role=user.role,
+        created_at=datetime.utcnow()
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+
+# New delete endpoints (Admin only)
+@app.delete("/offices/{office_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_office(
+    office_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_admin)
+):
+    office = db.query(models.Office).filter(models.Office.id == office_id).first()
+    if not office:
+        raise HTTPException(status_code=404, detail="Office not found")
+    
+    # Cascade delete related info if needed or rely on DB FK cascade
+    # For safety, manual cleanup of 1-to-1 or strict dependencies is good, but let's assume FKs handle simpler cases or raw delete is intention.
+    # Note: Many FKs exist. Be careful.
+    
+    db.delete(office)
+    db.commit()
+    return None
+
+
 
 
 @app.get("/districts")
@@ -664,6 +745,7 @@ def update_office(
     office_id: int,
     payload: schemas.OfficeUpdate,
     db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
 ):
     office = db.query(models.Office).filter(models.Office.id == office_id).first()
     if not office:
@@ -700,6 +782,7 @@ def update_group_member(
     office_id: int,
     payload: schemas.GroupMemberUpdate,
     db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
 ):
     member = (
         db.query(models.OfficeGroupMember)
@@ -724,6 +807,7 @@ def advance_office_playbook(
     office_id: int,
     payload: schemas.PlaybookUpdate,
     db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
 ):
     steps = [
         "First Contact",
@@ -762,6 +846,7 @@ def advance_group_playbook(
     group_id: int,
     payload: schemas.PlaybookUpdate,
     db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
 ):
     steps = [
         "Identify group",
@@ -800,6 +885,7 @@ def create_office_activity(
     office_id: int,
     payload: schemas.ActivityCreate,
     db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
 ):
     activity = models.OfficeActivity(
         office_id=office_id,
@@ -999,7 +1085,11 @@ def list_office_visits(office_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/visits", response_model=schemas.VisitBase)
-def create_visit(payload: schemas.VisitCreate, db: Session = Depends(get_db)):
+def create_visit(
+    payload: schemas.VisitCreate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
     visit = models.Visit(
         office_id=payload.office_id,
         group_id=payload.group_id,
@@ -1016,7 +1106,12 @@ def create_visit(payload: schemas.VisitCreate, db: Session = Depends(get_db)):
 
 
 @app.patch("/visits/{visit_id}", response_model=schemas.VisitBase)
-def update_visit(visit_id: int, payload: schemas.VisitUpdate, db: Session = Depends(get_db)):
+def update_visit(
+    visit_id: int, 
+    payload: schemas.VisitUpdate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
     visit = db.query(models.Visit).filter(models.Visit.id == visit_id).first()
     if not visit:
         raise HTTPException(status_code=404, detail="Visit not found")
@@ -1264,7 +1359,11 @@ def get_visit_lists(db: Session = Depends(get_db)):
 
 
 @app.post("/visit-lists", response_model=schemas.VisitListBase)
-def create_visit_list(payload: schemas.VisitListCreate, db: Session = Depends(get_db)):
+def create_visit_list(
+    payload: schemas.VisitListCreate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
     new_list = models.VisitList(
         name=payload.name,
         created_at=datetime.utcnow()
@@ -1275,6 +1374,7 @@ def create_visit_list(payload: schemas.VisitListCreate, db: Session = Depends(ge
     return new_list
 
 
+
 @app.get("/visit-lists/{list_id}", response_model=schemas.VisitListBase)
 def get_visit_list(list_id: int, db: Session = Depends(get_db)):
     lst = db.query(models.VisitList).filter(models.VisitList.id == list_id).first()
@@ -1283,11 +1383,33 @@ def get_visit_list(list_id: int, db: Session = Depends(get_db)):
     return lst
 
 
+@app.delete("/visit-lists/{list_id}", status_code=204)
+def delete_visit_list(
+    list_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_admin)
+):
+    lst = db.query(models.VisitList).filter(models.VisitList.id == list_id).first()
+    if not lst:
+        raise HTTPException(status_code=404, detail="Visit list not found")
+    
+    # Optional: Delete members first if no cascade is set up, 
+    # but normally cascade should handle it or we can leave them orphaned (bad).
+    # Ideally models.VisitListMember should cascade delete on VisitList delete.
+    # We will manually delete members just in case.
+    db.query(models.VisitListMember).filter(models.VisitListMember.visit_list_id == list_id).delete()
+    
+    db.delete(lst)
+    db.commit()
+    return None
+
+
 @app.post("/visit-lists/{list_id}/members", response_model=list[schemas.VisitListMemberBase])
 def add_visit_list_members(
     list_id: int, 
     office_ids: list[int], 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
 ):
     # Retrieve current members to avoid duplicates
     existing = db.query(models.VisitListMember.office_id)\

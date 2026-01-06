@@ -162,8 +162,7 @@ class MessageResponse(BaseModel):
     created_at: datetime
     last_reply_at: datetime | None = None
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BatchSendResponse(BaseModel):
@@ -283,3 +282,34 @@ class OutreachBoardResponse(BaseModel):
     planned: list[OutreachBoardItem]
     cold: list[OutreachBoardItem]
     stale: list[OutreachBoardItem]
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    email: Optional[str] = None
+
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+
+class UserCreate(BaseModel):
+    email: str
+    name: str
+    password: str
+    role: str = "Operator"
+
+
+class UserResponse(BaseModel):
+    id: int
+    name: str
+    email: str
+    role: str
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+

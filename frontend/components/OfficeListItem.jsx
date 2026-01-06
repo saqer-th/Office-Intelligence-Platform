@@ -75,9 +75,13 @@ export default function OfficeListItem({
                             {office.rating ? `⭐ ${office.rating}` : "No Rating"}
                         </div>
                         <div className="text-[10px] text-muted mt-0.5">
-                            {office.nearest_office_distance_m
-                                ? `${Math.round(office.nearest_office_distance_m)}m away`
-                                : "Isolated"}
+                            {office.user_distance_m !== undefined && office.user_distance_m !== null
+                                ? `${(office.user_distance_m / 1000).toFixed(2)}km from me`
+                                : (office.nearest_office_distance_m
+                                    ? `${Math.round(office.nearest_office_distance_m)}m from neighbor`
+                                    : "Isolated"
+                                )
+                            }
                         </div>
                     </div>
                 </div>

@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../../contexts/AuthContext";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export default function VisitListsPage() {
   const router = useRouter();
+  const { token } = useAuth();
   const [lists, setLists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -35,11 +37,16 @@ export default function VisitListsPage() {
 
   const handleCreateList = async () => {
     if (!newListName.trim()) return;
+    if (!token) return alert("Please log in to create a list.");
+
     const base = API_BASE_URL || "http://localhost:8000";
     try {
       const res = await fetch(`${base}/visit-lists`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({ name: newListName })
       });
       if (res.ok) {

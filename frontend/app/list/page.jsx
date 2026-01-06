@@ -135,92 +135,144 @@ export default function ListPage() {
     router.push(`/outreach?source=ids&ids=${ids}`);
   };
 
+  // Geolocation for "Nearest" sorting
+  const [userLocation, setUserLocation] = useState(null);
+
+  useEffect(() => {
+    if (currentSort === "distance" && !userLocation) {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          (err) => console.error("Locate error", err)
+        );
+      }
+    }
+  }, [currentSort, userLocation]);
+
+  const getDist = (lat1, lon1, lat2, lon2) => {
+    const R = 6371e3; // metres
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) *
+      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
   const sortedOffices = useMemo(() => {
-    const items = [...offices];
+    let items = [...offices];
+
+    // Inject user distance if available
+    if (userLocation) {
+      items = items.map(o => {
+        const dist = (o.latitude && o.longitude)
+          ? getDist(userLocation.lat, userLocation.lng, Number(o.latitude), Number(o.longitude))
+          : null;
+        return { ...o, user_distance_m: dist };
+      });
+    }
+
     if (currentSort === "distance") {
-      return items.sort((a, b) => (a.nearest_office_distance_m || 9999) - (b.nearest_office_distance_m || 9999));
+      // Sort by user distance if available, otherwise by internal nearest metric
+      return items.sort((a, b) => {
+        if (a.user_distance_m !== null && b.user_distance_m !== null) {
+          return a.user_distance_m - b.user_distance_m;
+        }
+        return (a.nearest_office_distance_m || 9999) - (b.nearest_office_distance_m || 9999);
+      });
     }
     if (currentSort === "rating") {
       return items.sort((a, b) => (b.rating || 0) - (a.rating || 0));
     }
     // Default: Priority
     return items.sort((a, b) => (b.priority_score || 0) - (a.priority_score || 0));
-  }, [offices, currentSort]);
+  }, [offices, currentSort, userLocation]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header / Filter Bar */}
-        <header className="flex flex-shrink-0 items-center justify-between border-b border-border bg-white px-6 py-4 shadow-sm z-10">
-          <div className="flex items-center gap-4">
+        <header className="flex flex-col flex-shrink-0 border-b border-border bg-white shadow-sm z-10">
+          <div className="flex items-center justify-between px-4 py-3 lg:px-6 lg:py-4">
             <h1 className="text-xl font-bold text-ink">Market List</h1>
             <div className="flex items-center gap-2">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search offices..."
-                  className="h-9 w-48 rounded-lg border border-border bg-slate-50 pl-3 pr-8 text-sm focus:border-primary focus:outline-none"
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                />
-                {searchInput && (
-                  <button
-                    onClick={() => setSearchInput("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-ink"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-              <select
-                className="h-9 w-32 rounded-lg border border-border bg-slate-50 px-3 text-sm focus:border-primary focus:outline-none"
-                value={currentCity || ""}
-                onChange={(e) => setFilters({ city: e.target.value || null, district: null })}
+              <Link href="/messages" className="lg:hidden p-2 text-slate-600">
+                <span className="text-xl">💬</span>
+              </Link>
+              <button
+                onClick={() => setMapOpen(!mapOpen)}
+                className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${mapOpen
+                  ? "bg-slate-800 text-white shadow-md"
+                  : "bg-white text-slate-700 border border-border hover:bg-slate-50"
+                  }`}
               >
-                <option value="">All Cities</option>
-                {cityOptions.map(city => (
-                  <option key={city} value={city}>{city}</option>
-                ))}
-              </select>
-
-              <select
-                className="h-9 w-32 rounded-lg border border-border bg-slate-50 px-3 text-sm focus:border-primary focus:outline-none"
-                value={currentDistrict || ""}
-                onChange={(e) => setFilter("district", e.target.value || null)}
-                disabled={!currentCity}
-              >
-                <option value="">All Districts</option>
-                {districtOptions.map(dist => (
-                  <option key={dist} value={dist}>{dist}</option>
-                ))}
-              </select>
-              <select
-                className="h-9 rounded-lg border border-border bg-slate-50 px-3 text-sm focus:border-primary focus:outline-none"
-                value={currentStatus}
-                onChange={(e) => setFilter("status", e.target.value)}
-              >
-                <option value="All">All Status</option>
-                <option value="New">New</option>
-                <option value="Interested">Interested</option>
-                <option value="Contacted">Contacted</option>
-                <option value="Visited">Visited</option>
-              </select>
+                {mapOpen ? "Hide Map" : "Show Map"}
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Link href="/messages" className="px-3 py-2 text-sm font-medium text-slate-700 hover:text-primary">
-              Message Center
-            </Link>
-            <button
-              onClick={() => setMapOpen(!mapOpen)}
-              className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${mapOpen
-                ? "bg-slate-800 text-white shadow-md"
-                : "bg-white text-slate-700 border border-border hover:bg-slate-50"
-                }`}
+
+          {/* Scrollable Filters for Mobile */}
+          <div className="flex items-center gap-2 overflow-x-auto px-4 pb-3 lg:px-6 lg:pb-4 custom-scrollbar">
+            <div className="relative flex-shrink-0">
+              <input
+                type="text"
+                placeholder="Search offices..."
+                className="h-9 w-40 lg:w-48 rounded-lg border border-border bg-slate-50 pl-3 pr-8 text-sm focus:border-primary focus:outline-none"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+              />
+              {searchInput && (
+                <button
+                  onClick={() => setSearchInput("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-ink"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+            <select
+              className="h-9 w-32 rounded-lg border border-border bg-slate-50 px-3 text-sm focus:border-primary focus:outline-none flex-shrink-0"
+              value={currentCity || ""}
+              onChange={(e) => setFilters({ city: e.target.value || null, district: null })}
             >
-              {mapOpen ? "Hide Map" : "Show Map"}
-            </button>
+              <option value="">All Cities</option>
+              {cityOptions.map(city => (
+                <option key={city} value={city}>{city}</option>
+              ))}
+            </select>
+
+            <select
+              className="h-9 w-32 rounded-lg border border-border bg-slate-50 px-3 text-sm focus:border-primary focus:outline-none flex-shrink-0"
+              value={currentDistrict || ""}
+              onChange={(e) => setFilter("district", e.target.value || null)}
+              disabled={!currentCity}
+            >
+              <option value="">All Districts</option>
+              {districtOptions.map(dist => (
+                <option key={dist} value={dist}>{dist}</option>
+              ))}
+            </select>
+            <select
+              className="h-9 rounded-lg border border-border bg-slate-50 px-3 text-sm focus:border-primary focus:outline-none flex-shrink-0"
+              value={currentStatus}
+              onChange={(e) => setFilter("status", e.target.value)}
+            >
+              <option value="All">All Status</option>
+              <option value="New">New</option>
+              <option value="Interested">Interested</option>
+              <option value="Contacted">Contacted</option>
+              <option value="Visited">Visited</option>
+            </select>
+
+            <div className="hidden lg:flex items-center gap-3 ml-auto">
+              <Link href="/messages" className="px-3 py-2 text-sm font-medium text-slate-700 hover:text-primary">
+                Message Center
+              </Link>
+            </div>
           </div>
         </header>
 

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import StatusBadge from "../../../components/StatusBadge";
 import ComposeMessageModal from "../../../components/ComposeMessageModal";
+import BulkAddToListModal from "../../../components/BulkAddToListModal";
+import { useAuth } from "../../../contexts/AuthContext";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -12,6 +14,7 @@ export default function OfficeDetailPage({ params }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const backUrl = searchParams.get("back") || "/list";
+  const { user, token } = useAuth();
 
   const [office, setOffice] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -103,6 +106,30 @@ export default function OfficeDetailPage({ params }) {
     }
   };
 
+  const handleDelete = async () => {
+    if (!confirm("Are you sure you want to delete this office? This action cannot be undone.")) return;
+
+    try {
+      const base = API_BASE_URL || "http://localhost:8000";
+      const res = await fetch(`${base}/offices/${params.id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+
+      if (res.ok) {
+        alert("Office deleted successfully");
+        router.push("/list");
+      } else {
+        const err = await res.json();
+        alert("Failed to delete office: " + (err.detail || "Unknown error"));
+      }
+    } catch (e) {
+      alert("Failed to delete office");
+    }
+  };
+
   const openListModal = () => {
     setShowListModal(true);
   };
@@ -129,12 +156,12 @@ export default function OfficeDetailPage({ params }) {
       </div>
 
       {/* Header Card */}
-      <div className="bg-white rounded-xl border border-border p-6 shadow-sm">
-        <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-ink mb-1">{office.name}</h1>
-            <p className="text-muted text-lg">{office.district} • {office.city}</p>
-            <div className="flex items-center gap-3 mt-4">
+      <div className="bg-white rounded-xl border border-border p-4 lg:p-6 shadow-sm">
+        <div className="flex flex-col lg:flex-row justify-between items-start gap-4 lg:gap-6">
+          <div className="w-full lg:w-auto">
+            <h1 className="text-2xl lg:text-3xl font-bold text-ink mb-1">{office.name}</h1>
+            <p className="text-muted text-base lg:text-lg">{office.district} • {office.city}</p>
+            <div className="flex flex-wrap items-center gap-2 lg:gap-3 mt-4">
               <StatusBadge status={office.interest_status || "New"} />
 
               {/* Derived Visit Status */}
@@ -146,7 +173,7 @@ export default function OfficeDetailPage({ params }) {
                   return (
                     <span className="flex items-center gap-1 text-xs font-semibold bg-green-100 text-green-700 px-2 py-1 rounded border border-green-200">
                       <span>✓ Visited</span>
-                      <span className="opacity-75 font-normal">
+                      <span className="opacity-75 font-normal ml-1">
                         {new Date(completedVisit.completed_at || completedVisit.scheduled_at).toLocaleDateString()}
                       </span>
                     </span>
@@ -174,47 +201,55 @@ export default function OfficeDetailPage({ params }) {
             </div>
           </div>
 
-          <div className="flex flex-col items-end gap-3">
+          <div className="flex flex-col w-full lg:w-auto items-stretch lg:items-end gap-3 mt-2 lg:mt-0">
             <button
               onClick={openListModal}
-              className="px-4 py-2 rounded-lg font-medium text-sm transition-all bg-primary text-white shadow-md hover:bg-primary/90"
+              className="px-4 py-2 rounded-lg font-medium text-sm transition-all bg-primary text-white shadow-md hover:bg-primary/90 text-center"
             >
               Manage Lists
             </button>
-            <div className="flex gap-2">
+            <div className="flex gap-2 justify-end">
               <button
                 onClick={() => setShowVisitModal(true)}
-                className="px-4 py-2 rounded-lg font-medium text-sm bg-purple-600 text-white hover:bg-purple-700 shadow-md flex items-center gap-2"
+                className="flex-1 lg:flex-none px-4 py-2 rounded-lg font-medium text-sm bg-purple-600 text-white hover:bg-purple-700 shadow-md flex items-center justify-center gap-2"
               >
                 <span>📍 Mark Visited</span>
               </button>
               {office.phone && (
-                <a href={`https://wa.me/${office.phone.replace(/[^0-9]/g, '')}`} target="_blank" className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 border border-green-200" title="WhatsApp">
+                <a href={`https://wa.me/${office.phone.replace(/[^0-9]/g, '')}`} target="_blank" className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 border border-green-200 text-center" title="WhatsApp">
                   💬
                 </a>
               )}
               {office.phone && (
-                <a href={`tel:${office.phone}`} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200" title="Call">
+                <a href={`tel:${office.phone}`} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 text-center" title="Call">
                   📞
                 </a>
               )}
               {office.google_maps_url && (
-                <a href={office.google_maps_url} target="_blank" className="p-2 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200" title="Maps">
+                <a href={office.google_maps_url} target="_blank" className="p-2 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 text-center" title="Maps">
                   📍
                 </a>
               )}
             </div>
+            {user?.role === 'Admin' && (
+              <button
+                onClick={handleDelete}
+                className="text-xs text-red-500 hover:text-red-700 underline mt-2 text-right self-end"
+              >
+                Delete Office
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-[2fr_1fr] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] list-none gap-6">
         {/* Main Content */}
         <div className="space-y-6">
           {/* Quick Actions / Status */}
-          <div className="p-4 bg-slate-50 border border-border rounded-xl flex flex-wrap gap-4 items-center justify-between">
+          <div className="p-4 bg-slate-50 border border-border rounded-xl flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <span className="text-sm font-medium text-muted uppercase tracking-wide">Update Status:</span>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
               {['Interested', 'Later', 'Rejected', 'Onboarded'].map(status => (
                 <button
                   key={status}
@@ -481,76 +516,20 @@ export default function OfficeDetailPage({ params }) {
       )}
 
       {showListModal && (
-        <ListMembershipModal
-          officeId={office.id}
+        <BulkAddToListModal
+          selectedIds={[office.id]}
           onClose={() => setShowListModal(false)}
+          onSuccess={() => {
+            // Optional: refresh data if needed
+            setShowListModal(false);
+          }}
         />
       )}
     </div>
   );
 }
 
-function ListMembershipModal({ officeId, onClose }) {
-  const [lists, setLists] = useState([]);
-  const [membershipMap, setMembershipMap] = useState({}); // list_id -> boolean
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const base = API_BASE_URL || "http://localhost:8000";
-    Promise.all([
-      fetch(`${base}/visit-lists`).then(r => r.json()),
-      fetch(`${base}/offices/${officeId}/visit-lists`).then(r => r.json())
-    ]).then(([allLists, myLists]) => {
-      setLists(allLists);
-      const map = {};
-      if (Array.isArray(myLists)) {
-        myLists.forEach(l => map[l.id] = true);
-      }
-      setMembershipMap(map);
-      setLoading(false);
-    });
-  }, [officeId]);
-
-  const toggle = async (listId, currentStatus) => {
-    const base = API_BASE_URL || "http://localhost:8000";
-    if (!currentStatus) {
-      // Add
-      await fetch(`${base}/visit-lists/${listId}/members`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify([officeId])
-      });
-      setMembershipMap(prev => ({ ...prev, [listId]: true }));
-    } else {
-      // Remove - Not implemented in backend yet! DELETE /visit-lists/{id}/members/{officeId}
-      alert("Removal not supported yet in API (Safety).");
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 space-y-4">
-        <h3 className="text-lg font-bold">Manage Lists</h3>
-        <div className="space-y-2 max-h-60 overflow-y-auto">
-          {loading && <p>Loading...</p>}
-          {!loading && lists.map(l => (
-            <div key={l.id} className="flex justify-between items-center p-2 hover:bg-slate-50 rounded">
-              <span>{l.name}</span>
-              <button
-                onClick={() => !membershipMap[l.id] && toggle(l.id, membershipMap[l.id])}
-                className={`text-xs px-2 py-1 rounded border ${membershipMap[l.id] ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-default' : 'bg-white border-slate-300 hover:bg-slate-100'}`}
-                disabled={membershipMap[l.id]}
-              >
-                {membershipMap[l.id] ? "In List" : "Add"}
-              </button>
-            </div>
-          ))}
-        </div>
-        <button onClick={onClose} className="w-full py-2 bg-slate-100 rounded text-sm font-medium">Close</button>
-      </div>
-    </div>
-  );
-}
 
 function RecordVisitModal({ officeId, onClose, onSuccess }) {
   const [outcome, setOutcome] = useState("Interested");
