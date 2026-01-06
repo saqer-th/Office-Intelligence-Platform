@@ -1,0 +1,2 @@
+ALTER TABLE offices
+ADD COLUMN IF NOT EXISTS interest_status VARCHAR DEFAULT 'Unknown';
