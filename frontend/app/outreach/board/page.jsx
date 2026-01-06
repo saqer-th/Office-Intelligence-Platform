@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { API_BASE_URL } from "../../utils/api";
+import { API_BASE_URL } from "../../../utils/api";
 
 export default function OutreachBoardPage() {
     const [data, setData] = useState(null);
