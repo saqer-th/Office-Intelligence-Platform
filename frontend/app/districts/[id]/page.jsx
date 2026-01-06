@@ -5,8 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import OfficeList from "../../../components/OfficeList";
 import BulkAddToListModal from "../../../components/BulkAddToListModal";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { API_BASE_URL } from "../../../utils/api";
 
 export default function DistrictDetailPage({ params }) {
     const router = useRouter();
@@ -22,7 +21,6 @@ export default function DistrictDetailPage({ params }) {
 
     useEffect(() => {
         if (!districtName) return;
-        const base = API_BASE_URL || "http://localhost:8000";
         setLoading(true);
 
         const params = new URLSearchParams({
@@ -30,7 +28,7 @@ export default function DistrictDetailPage({ params }) {
             limit: "100" // Maybe increase for full district view
         });
 
-        fetch(`${base}/offices?${params.toString()}`)
+        fetch(`${API_BASE_URL}/offices?${params.toString()}`)
             .then(async (res) => {
                 const data = await res.json();
                 if (!res.ok) throw new Error("Failed to load district offices");

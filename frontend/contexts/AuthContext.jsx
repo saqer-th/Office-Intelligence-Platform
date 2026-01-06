@@ -1,6 +1,6 @@
-'use client';
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_BASE_URL } from '../utils/api';
 
 const AuthContext = createContext();
 
@@ -9,7 +9,6 @@ export function AuthProvider({ children }) {
     const [token, setToken] = useState(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
-    const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
     useEffect(() => {
         // Check for token on load
@@ -24,7 +23,7 @@ export function AuthProvider({ children }) {
 
     const fetchUser = async (authToken) => {
         try {
-            const res = await fetch(`${API_BASE}/users/me`, {
+            const res = await fetch(`${API_BASE_URL}/users/me`, {
                 headers: {
                     'Authorization': `Bearer ${authToken}`
                 }
@@ -50,7 +49,7 @@ export function AuthProvider({ children }) {
         formData.append('username', email);
         formData.append('password', password);
 
-        const res = await fetch(`${API_BASE}/auth/token`, {
+        const res = await fetch(`${API_BASE_URL}/auth/token`, {
             method: 'POST',
             body: formData,
         });

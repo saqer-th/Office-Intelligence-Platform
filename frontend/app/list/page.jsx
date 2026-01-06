@@ -9,9 +9,9 @@ import DebugPanel from "../../components/DebugPanel";
 import ComposeMessageModal from "../../components/ComposeMessageModal";
 import BulkAddToListModal from "../../components/BulkAddToListModal";
 import { useUrlFilters } from "../../hooks/useUrlFilters";
+import { API_BASE_URL } from "../../utils/api";
 
 const MapClient = dynamic(() => import("../map/MapClient"), { ssr: false });
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 const DEBOUNCE_MS = 300;
 const PAGE_SIZE = 50;
 
@@ -58,8 +58,7 @@ export default function ListPage() {
 
   // Fetch Options (One-time fetch for filter lists)
   useEffect(() => {
-    const base = API_BASE_URL || "http://localhost:8000";
-    fetch(`${base}/offices?limit=1000`)
+    fetch(`${API_BASE_URL}/offices?limit=1000`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data.data)) {
@@ -76,8 +75,7 @@ export default function ListPage() {
       setDistrictOptions([]);
       return;
     }
-    const base = API_BASE_URL || "http://localhost:8000";
-    fetch(`${base}/offices?limit=1000&city=${currentCity}`)
+    fetch(`${API_BASE_URL}/offices?limit=1000&city=${currentCity}`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data.data)) {
@@ -93,7 +91,6 @@ export default function ListPage() {
   // Fetch Offices
   const fetchOffices = useCallback(() => {
     setLoading(true);
-    const base = API_BASE_URL || "http://localhost:8000";
     const params = new URLSearchParams({ limit: PAGE_SIZE.toString() });
 
     if (currentCity) params.append("city", currentCity);
@@ -101,7 +98,7 @@ export default function ListPage() {
     if (currentStatus && currentStatus !== "All") params.append("interest_status", currentStatus);
     if (currentSearch) params.append("search", currentSearch);
 
-    fetch(`${base}/offices?${params.toString()}`)
+    fetch(`${API_BASE_URL}/offices?${params.toString()}`)
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok) throw new Error("Failed to load offices");

@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { API_BASE_URL } from "../../../utils/api";
 
 export default function AdminUsersPage() {
     const { token, user } = useAuth();
@@ -25,8 +24,7 @@ export default function AdminUsersPage() {
         if (!token) return;
 
         try {
-            const base = API_BASE_URL || "http://localhost:8000";
-            const res = await fetch(`${base}/users`, {
+            const res = await fetch(`${API_BASE_URL}/users`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

@@ -1,8 +1,5 @@
-"use client";
-
 import { useState } from "react";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { API_BASE_URL } from "../utils/api";
 
 export default function ComposeMessageModal({
     selectedIds = [],
@@ -20,10 +17,8 @@ export default function ComposeMessageModal({
     const handleSend = async () => {
         if (!body.trim()) return;
         setLoading(true);
-        const base = API_BASE_URL || "http://localhost:8000";
-
         try {
-            const res = await fetch(`${base}/messages/send`, {
+            const res = await fetch(`${API_BASE_URL}/messages/send`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

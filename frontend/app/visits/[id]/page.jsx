@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../contexts/AuthContext";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { API_BASE_URL } from "../../../utils/api";
 
 export default function VisitListDetail({ params }) {
     const [list, setList] = useState(null);
@@ -16,17 +15,16 @@ export default function VisitListDetail({ params }) {
     const { user, token } = useAuth();
 
     useEffect(() => {
-        const base = API_BASE_URL || "http://localhost:8000";
         setLoading(true);
 
-        fetch(`${base}/visit-lists/${params.id}`)
+        fetch(`${API_BASE_URL}/visit-lists/${params.id}`)
             .then(r => {
                 if (!r.ok) throw new Error("List not found");
                 return r.json();
             })
             .then(listData => {
                 setList(listData);
-                return fetch(`${base}/visit-lists/${params.id}/members`);
+                return fetch(`${API_BASE_URL}/visit-lists/${params.id}/members`);
             })
             .then(r => r.json())
             .then(memberData => {
@@ -59,8 +57,7 @@ export default function VisitListDetail({ params }) {
     const handleDelete = async () => {
         if (!confirm("Are you sure you want to delete this list?")) return;
         try {
-            const base = API_BASE_URL || "http://localhost:8000";
-            const res = await fetch(`${base}/visit-lists/${params.id}`, {
+            const res = await fetch(`${API_BASE_URL}/visit-lists/${params.id}`, {
                 method: "DELETE",
                 headers: {
                     "Authorization": `Bearer ${token}`

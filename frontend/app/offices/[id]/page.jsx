@@ -7,8 +7,7 @@ import StatusBadge from "../../../components/StatusBadge";
 import ComposeMessageModal from "../../../components/ComposeMessageModal";
 import BulkAddToListModal from "../../../components/BulkAddToListModal";
 import { useAuth } from "../../../contexts/AuthContext";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { API_BASE_URL } from "../../../utils/api";
 
 export default function OfficeDetailPage({ params }) {
   const router = useRouter();
@@ -37,7 +36,6 @@ export default function OfficeDetailPage({ params }) {
 
   useEffect(() => {
     // Check membership on load
-    const base = API_BASE_URL || "http://localhost:8000";
     if (params?.id) {
       // Ideally we have an endpoint /offices/{id}/lists, but for now we can infer from /outreach/board data or just fetch all lists and check members? 
       // Or simpler: GET /visit-lists, then for each check membership? No, too many requests.
@@ -49,14 +47,13 @@ export default function OfficeDetailPage({ params }) {
 
   const fetchOfficeData = () => {
     if (!params?.id) return;
-    const base = API_BASE_URL || "http://localhost:8000";
 
     setLoading(true);
     Promise.all([
-      fetch(`${base}/offices/${params.id}`).then(r => r.json()),
-      fetch(`${base}/offices/${params.id}/messages`).then(r => r.json()),
-      fetch(`${base}/visits?office_id=${params.id}`).then(r => r.json()),
-      fetch(`${base}/offices/${params.id}/activities`).then(r => r.ok ? r.json() : []) // Swallow 404 if not yet implemented/empty
+      fetch(`${API_BASE_URL}/offices/${params.id}`).then(r => r.json()),
+      fetch(`${API_BASE_URL}/offices/${params.id}/messages`).then(r => r.json()),
+      fetch(`${API_BASE_URL}/visits?office_id=${params.id}`).then(r => r.json()),
+      fetch(`${API_BASE_URL}/offices/${params.id}/activities`).then(r => r.ok ? r.json() : []) // Swallow 404 if not yet implemented/empty
     ])
       .then(([officeData, msgData, visitData, activityData]) => {
         if (officeData.detail) throw new Error(officeData.detail);
@@ -77,8 +74,7 @@ export default function OfficeDetailPage({ params }) {
 
   const handleStatusUpdate = async (newStatus) => {
     try {
-      const base = API_BASE_URL || "http://localhost:8000";
-      const res = await fetch(`${base}/offices/${params.id}`, {
+      const res = await fetch(`${API_BASE_URL}/offices/${params.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ interest_status: newStatus })
@@ -93,8 +89,7 @@ export default function OfficeDetailPage({ params }) {
 
   const handleNotesSave = async () => {
     try {
-      const base = API_BASE_URL || "http://localhost:8000";
-      await fetch(`${base}/offices/${params.id}`, {
+      await fetch(`${API_BASE_URL}/offices/${params.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ notes: notes })
@@ -110,8 +105,7 @@ export default function OfficeDetailPage({ params }) {
     if (!confirm("Are you sure you want to delete this office? This action cannot be undone.")) return;
 
     try {
-      const base = API_BASE_URL || "http://localhost:8000";
-      const res = await fetch(`${base}/offices/${params.id}`, {
+      const res = await fetch(`${API_BASE_URL}/offices/${params.id}`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${token}`
@@ -298,8 +292,7 @@ export default function OfficeDetailPage({ params }) {
                           if (!note.trim()) return;
 
                           // Optimistic update or fetch
-                          const base = API_BASE_URL || "http://localhost:8000";
-                          fetch(`${base}/offices/${params.id}/activities`, {
+                          fetch(`${API_BASE_URL}/offices/${params.id}/activities`, {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ activity_type: type, notes: note, outcome: "Completed" })
@@ -320,8 +313,7 @@ export default function OfficeDetailPage({ params }) {
 
                         if (!note.trim()) return;
 
-                        const base = API_BASE_URL || "http://localhost:8000";
-                        fetch(`${base}/offices/${params.id}/activities`, {
+                        fetch(`${API_BASE_URL}/offices/${params.id}/activities`, {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ activity_type: type, notes: note, outcome: "Completed" })
@@ -540,11 +532,10 @@ function RecordVisitModal({ officeId, onClose, onSuccess }) {
   const handleSubmit = async () => {
     if (!outcome) return alert("Outcome is required");
     setLoading(true);
-    const base = API_BASE_URL || "http://localhost:8000";
 
     try {
       // Atomic Visit Completion
-      await fetch(`${base}/visits/complete`, {
+      await fetch(`${API_BASE_URL}/visits/complete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

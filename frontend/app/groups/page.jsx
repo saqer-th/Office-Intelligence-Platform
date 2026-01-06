@@ -6,8 +6,7 @@ import GroupCard from "../../components/GroupCard";
 import OfficeList from "../../components/OfficeList";
 import DebugPanel from "../../components/DebugPanel";
 import BulkAddToListModal from "../../components/BulkAddToListModal"; // Ensure path is correct
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { API_BASE_URL } from "../../utils/api";
 
 export default function GroupsPage() {
   const [groups, setGroups] = useState([]);
@@ -24,8 +23,7 @@ export default function GroupsPage() {
 
   // Fetch Options
   useEffect(() => {
-    const base = API_BASE_URL || "http://localhost:8000";
-    fetch(`${base}/groups?limit=1000`)
+    fetch(`${API_BASE_URL}/groups?limit=1000`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -38,7 +36,7 @@ export default function GroupsPage() {
       .catch(console.error);
 
     // Prefetch district stats
-    fetch(`${base}/districts`)
+    fetch(`${API_BASE_URL}/districts`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) setDistrictStats(data);
@@ -48,13 +46,12 @@ export default function GroupsPage() {
   }, []);
 
   const fetchGroups = () => {
-    const base = API_BASE_URL || "http://localhost:8000";
     const params = new URLSearchParams();
     if (filters.city) params.append("city", filters.city);
     if (filters.district) params.append("district", filters.district);
 
     setLoading(true);
-    fetch(`${base}/groups?${params.toString()}`)
+    fetch(`${API_BASE_URL}/groups?${params.toString()}`)
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok) throw new Error("Failed to load groups");
@@ -250,13 +247,12 @@ function DistrictOfficeList({ district, city }) {
   const [showAddToList, setShowAddToList] = useState(false);
 
   useEffect(() => {
-    const base = API_BASE_URL || "http://localhost:8000";
     setLoading(true);
     const params = new URLSearchParams({ limit: "100" });
     if (city) params.append("city", city);
     if (district) params.append("district", district);
 
-    fetch(`${base}/offices?${params.toString()}`)
+    fetch(`${API_BASE_URL}/offices?${params.toString()}`)
       .then(r => r.json())
       .then(data => {
         setOffices(Array.isArray(data.data) ? data.data : []);

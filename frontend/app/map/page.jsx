@@ -6,9 +6,9 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import DebugPanel from "../../components/DebugPanel";
 import { useUrlFilters } from "../../hooks/useUrlFilters";
+import { API_BASE_URL } from "../../utils/api";
 
 const MapClient = dynamic(() => import("./MapClient"), { ssr: false });
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 const DEBOUNCE_MS = 300;
 const PAGE_SIZE = 25;
 
@@ -38,8 +38,7 @@ export default function MapPage() {
   });
 
   useEffect(() => {
-    const base = API_BASE_URL || "http://localhost:8000";
-    fetch(`${base}/districts`)
+    fetch(`${API_BASE_URL}/districts`)
       .then(res => res.json())
       .then(data => {
         if (data && Array.isArray(data.data)) {
@@ -64,7 +63,6 @@ export default function MapPage() {
 
   const fetchOffices = useCallback((bounds, city, district) => {
     if (!bounds) return;
-    const base = API_BASE_URL || "http://localhost:8000";
     const params = new URLSearchParams({
       minLat: bounds.minLat.toString(),
       maxLat: bounds.maxLat.toString(),
@@ -76,7 +74,7 @@ export default function MapPage() {
     if (district !== null) params.set("district", district);
     if (currentInterestStatus) params.set("interest_status", currentInterestStatus);
 
-    const url = `${base}/offices?${params.toString()}`;
+    const url = `${API_BASE_URL}/offices?${params.toString()}`;
     setLoading(true);
     fetch(url)
       .then(async (res) => {

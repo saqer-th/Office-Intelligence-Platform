@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import OfficeList from "../../../components/OfficeList";
 import StatusBadge from "../../../components/StatusBadge";
 import BulkAddToListModal from "../../../components/BulkAddToListModal";
+import { API_BASE_URL } from "../../../utils/api";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 const MESSAGING_BASE_URL = process.env.NEXT_PUBLIC_MESSAGING_BASE_URL;
 
 export default function GroupDetailPage({ params }) {
@@ -26,9 +26,8 @@ export default function GroupDetailPage({ params }) {
 
   useEffect(() => {
     if (!params?.id) return;
-    const base = API_BASE_URL || "http://localhost:8000";
     setLoading(true);
-    fetch(`${base}/groups/${params.id}`)
+    fetch(`${API_BASE_URL}/groups/${params.id}`)
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok) throw new Error(data?.detail || "Failed to load group");

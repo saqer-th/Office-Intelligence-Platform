@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import DebugPanel from "../../components/DebugPanel";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { API_BASE_URL } from "../../utils/api";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState(null);
@@ -12,8 +11,7 @@ export default function DashboardPage() {
   const [lastResponse, setLastResponse] = useState(null);
 
   useEffect(() => {
-    const base = API_BASE_URL || "http://localhost:8000";
-    const url = `${base}/stats`;
+    const url = `${API_BASE_URL}/stats`;
     console.log("Dashboard fetch:", url);
     setLoading(true);
     fetch(url)

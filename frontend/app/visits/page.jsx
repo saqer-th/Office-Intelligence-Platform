@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { API_BASE_URL } from "../../utils/api";
 
 export default function VisitListsPage() {
   const router = useRouter();
@@ -18,8 +17,7 @@ export default function VisitListsPage() {
 
   const fetchLists = () => {
     setLoading(true);
-    const base = API_BASE_URL || "http://localhost:8000";
-    fetch(`${base}/visit-lists`)
+    fetch(`${API_BASE_URL}/visit-lists`)
       .then(res => res.json())
       .then(data => {
         setLists(Array.isArray(data) ? data : []);
@@ -39,9 +37,8 @@ export default function VisitListsPage() {
     if (!newListName.trim()) return;
     if (!token) return alert("Please log in to create a list.");
 
-    const base = API_BASE_URL || "http://localhost:8000";
     try {
-      const res = await fetch(`${base}/visit-lists`, {
+      const res = await fetch(`${API_BASE_URL}/visit-lists`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

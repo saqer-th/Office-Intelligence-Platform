@@ -1,11 +1,6 @@
-"use client";
-
-
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
-
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { API_BASE_URL } from "../utils/api";
 
 export default function BulkAddToListModal({ selectedIds, onClose, onSuccess }) {
     const { token } = useAuth();
@@ -15,8 +10,7 @@ export default function BulkAddToListModal({ selectedIds, onClose, onSuccess }) 
     const [creating, setCreating] = useState(false);
 
     useEffect(() => {
-        const base = API_BASE_URL || "http://localhost:8000";
-        fetch(`${base}/visit-lists`)
+        fetch(`${API_BASE_URL}/visit-lists`)
             .then(r => r.json())
             .then(data => {
                 setLists(Array.isArray(data) ? data : []);
@@ -35,10 +29,9 @@ export default function BulkAddToListModal({ selectedIds, onClose, onSuccess }) 
         }
 
         setCreating(true);
-        const base = API_BASE_URL || "http://localhost:8000";
         try {
             // 1. Create List
-            const createRes = await fetch(`${base}/visit-lists`, {
+            const createRes = await fetch(`${API_BASE_URL}/visit-lists`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -63,9 +56,8 @@ export default function BulkAddToListModal({ selectedIds, onClose, onSuccess }) 
     };
 
     const handleAdd = async (listId) => {
-        const base = API_BASE_URL || "http://localhost:8000";
         try {
-            const res = await fetch(`${base}/visit-lists/${listId}/members`, {
+            const res = await fetch(`${API_BASE_URL}/visit-lists/${listId}/members`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -76,11 +68,10 @@ export default function BulkAddToListModal({ selectedIds, onClose, onSuccess }) 
             if (res.ok) {
                 if (onSuccess) onSuccess();
                 if (onClose) onClose();
-                // alert(`Added ${selectedIds.length} offices to list.`); // Optional feedback
             } else {
                 const err = await res.json();
                 alert(`Failed: ${err.detail || "Unknown error"}`);
-                setCreating(false); // Reset if failed at this stage
+                setCreating(false);
             }
         } catch (e) {
             alert("Failed to add to list");

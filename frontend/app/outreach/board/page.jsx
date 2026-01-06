@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { API_BASE_URL } from "../../utils/api";
 
 export default function OutreachBoardPage() {
     const [data, setData] = useState(null);
@@ -11,8 +10,7 @@ export default function OutreachBoardPage() {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        const base = API_BASE_URL || "http://localhost:8000";
-        fetch(`${base}/outreach/board`)
+        fetch(`${API_BASE_URL}/outreach/board`)
             .then(res => {
                 if (!res.ok) throw new Error("Failed to load board data");
                 return res.json();

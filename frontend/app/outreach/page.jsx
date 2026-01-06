@@ -3,8 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { API_BASE_URL } from "../../utils/api";
 
 const TEMPLATES = [
   {
@@ -54,25 +53,24 @@ function OutreachContent() {
 
   // 1. Resolve Context on Mount
   useEffect(() => {
-    const base = API_BASE_URL || "http://localhost:8000";
     setLoading(true);
 
     async function loadContext() {
       try {
         if (source === "visit_list" && sourceId) {
           // Load Visit List recipients
-          const listRes = await fetch(`${base}/visit-lists/${sourceId}`);
+          const listRes = await fetch(`${API_BASE_URL}/visit-lists/${sourceId}`);
           const listInfo = await listRes.json();
           setContextTitle(`Visit List: ${listInfo.name}`);
 
           // Get members
-          const membersRes = await fetch(`${base}/visit-lists/${sourceId}/members`);
+          const membersRes = await fetch(`${API_BASE_URL}/visit-lists/${sourceId}/members`);
           const members = await membersRes.json();
 
           // We need full office details for contacts
           const ids = members.map(m => m.office_id);
           if (ids.length > 0) {
-            const officesRes = await fetch(`${base}/offices?ids=${ids.join(",")}`);
+            const officesRes = await fetch(`${API_BASE_URL}/offices?ids=${ids.join(",")}`);
             const officeData = await officesRes.json();
             setOffices(officeData.data || []);
           } else {
@@ -82,14 +80,14 @@ function OutreachContent() {
         else if (source === "ids" && sourceIdsStr) {
           setContextTitle("Selected Offices");
           const ids = sourceIdsStr.split(",");
-          const officesRes = await fetch(`${base}/offices?ids=${ids.join(",")}`);
+          const officesRes = await fetch(`${API_BASE_URL}/offices?ids=${ids.join(",")}`);
           const officeData = await officesRes.json();
           setOffices(officeData.data || []);
         }
         else if (source === "group" && sourceId) {
           setContextTitle(`Group #${sourceId}`);
           // Implies fetching group members - simplified for now
-          const groupsRes = await fetch(`${base}/groups/${sourceId}`);
+          const groupsRes = await fetch(`${API_BASE_URL}/groups/${sourceId}`);
           const group = await groupsRes.json();
           // Assuming group has member count logic or separate endpoint, 
           // for now we might need a specific endpoint like `groups/{id}/members`.
@@ -132,10 +130,9 @@ function OutreachContent() {
     if (offices.length === 0) return alert("No recipients.");
 
     setIsSendingBatch(true);
-    const base = API_BASE_URL || "http://localhost:8000";
 
     try {
-      const res = await fetch(`${base}/messages/send`, {
+      const res = await fetch(`${API_BASE_URL}/messages/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -159,10 +156,9 @@ function OutreachContent() {
     setShowConfirm(false);
     setIsSendingBatch(true);
     setBatchResult(null);
-    const base = API_BASE_URL || "http://localhost:8000";
 
     try {
-      const res = await fetch(`${base}/messages/send`, {
+      const res = await fetch(`${API_BASE_URL}/messages/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -198,8 +194,7 @@ function OutreachContent() {
 
   const markContacted = async (officeId) => {
     try {
-      const base = API_BASE_URL || "http://localhost:8000";
-      await fetch(`${base}/offices/${officeId}`, {
+      await fetch(`${API_BASE_URL}/offices/${officeId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ contact_status: "Contacted" })

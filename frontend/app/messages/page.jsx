@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import StatusBadge from "../../components/StatusBadge";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { API_BASE_URL } from "../../utils/api";
 
 export default function MessagesPage() {
     const [activeTab, setActiveTab] = useState("Inbox"); // Inbox, Sent
@@ -17,13 +16,12 @@ export default function MessagesPage() {
 
     const fetchMessages = (tab) => {
         setLoading(true);
-        const base = API_BASE_URL || "http://localhost:8000";
         // Map tabs to statuses/directions
         // Inbox = Inbound
         // Sent = Outbound
         const statusParam = tab === "Inbox" ? "Inbox" : "Sent";
 
-        fetch(`${base}/messages?status=${statusParam}`)
+        fetch(`${API_BASE_URL}/messages?status=${statusParam}`)
             .then(res => res.json())
             .then(data => {
                 setMessages(Array.isArray(data) ? data : []);
@@ -55,8 +53,8 @@ export default function MessagesPage() {
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === tab
-                                    ? "bg-primary/10 text-primary"
-                                    : "text-slate-600 hover:bg-slate-50"
+                                ? "bg-primary/10 text-primary"
+                                : "text-slate-600 hover:bg-slate-50"
                                 }`}
                         >
                             {tab}
@@ -90,8 +88,8 @@ export default function MessagesPage() {
                                     </div>
                                     <div className="mt-2 flex items-center justify-between">
                                         <span className={`text-[10px] px-2 py-0.5 rounded-full ${msg.status === 'Sent' ? 'bg-slate-100 text-slate-600' :
-                                                msg.status === 'Replied' ? 'bg-blue-50 text-blue-600' :
-                                                    'bg-red-50 text-red-600'
+                                            msg.status === 'Replied' ? 'bg-blue-50 text-blue-600' :
+                                                'bg-red-50 text-red-600'
                                             }`}>
                                             {msg.status}
                                         </span>
